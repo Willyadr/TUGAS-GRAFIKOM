@@ -41,35 +41,24 @@
             const hemiLight = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 1, 0), scene);
             hemiLight.intensity = 0.3;
 
-            // Fungsi untuk membuat Directional Light dengan Shadow Generator
+            // Fungsi untuk membuat Directional Light
             const createDirectionalLight = (name, direction, position) => {
                 const light = new BABYLON.DirectionalLight(name, direction, scene);
                 light.position = position;
                 light.intensity = 0.5;
-
-                const shadowGenerator = new BABYLON.ShadowGenerator(1024, light);
-                shadowGenerator.usePercentageCloserFiltering = true;
-                shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-
-                return { light, shadowGenerator };
+                return light;
             };
 
-            // Cahaya Directional dari belakang ke depan (supaya bayangan jatuh ke belakang dari sudut pandang kamera)
+            // Cahaya Directional dari belakang ke depan (supaya objek terang dari sudut pandang kamera)
             const light1 = createDirectionalLight("dirLight1", new BABYLON.Vector3(0, -1, -1), new BABYLON.Vector3(0, 5, 5));
 
             // Tambahkan alas (ground) yang lebih lebar
             const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 20, height: 20 }, scene); // Ukuran diperbesar menjadi 20x20
             ground.position.y = -1;
-            ground.receiveShadows = true;
 
             // Load model
             BABYLON.SceneLoader.Append("models/", "F-35.glb", scene, function () {
-                scene.meshes.forEach(mesh => {
-                    if (mesh !== ground) {
-                        light1.shadowGenerator.addShadowCaster(mesh);
-                    }
-                });
-                console.log("Model berhasil dimuat dan bayangan diaktifkan!");
+                console.log("Model berhasil dimuat tanpa bayangan!");
             });
 
             return scene;
