@@ -1,80 +1,174 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kelompok 2 Grafkom</title>
-    <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            width: 100%;
-            height: 100%;
-        }
-        canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kelompok 2 Grafkom</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+    }
+    .controls button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: rgba(255,255,255,0.8);
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-    <canvas id="renderCanvas"></canvas>
+<canvas id="renderCanvas"></canvas>
 
-    <script>
-        const canvas = document.getElementById("renderCanvas");
-        const engine = new BABYLON.Engine(canvas, true);
+<!-- Kontrol UI -->
+<div class="controls">
+  <button onclick="move('left')">⬅️</button>
+  <button onclick="move('forward')">⬆️</button>
+  <button onclick="move('backward')">⬇️</button>
+  <button onclick="move('right')">➡️</button>
+</div>
 
-        const createScene = function () {
-            const scene = new BABYLON.Scene(engine);
+<script>
+  const canvas = document.getElementById("renderCanvas");
+  const engine = new BABYLON.Engine(canvas, true);
+  let modelController = null;
 
-            // Kamera
-            const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2.5, 10, BABYLON.Vector3.Zero(), scene);
-            camera.attachControl(canvas, true);
+  const createScene = () => {
+    const scene = new BABYLON.Scene(engine);
 
-            // Cahaya Hemisferik
-            const hemiLight = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 1, 0), scene);
-            hemiLight.intensity = 0.3;
+    const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2.5, 20, BABYLON.Vector3.Zero(), scene);
+    camera.attachControl(canvas, true);
 
-            // Cahaya Directional + Shadow Generator
-            const dirLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(0, -1, -1), scene);
-            dirLight.position = new BABYLON.Vector3(0, 5, 5);
-            dirLight.intensity = 0.5;
+    const hemiLight = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 1, 0), scene);
+    hemiLight.intensity = 0.4;
 
-            const shadowGenerator = new BABYLON.ShadowGenerator(1024, dirLight);
-            shadowGenerator.useBlurExponentialShadowMap = true;
-            shadowGenerator.blurKernel = 32;
+    const dirLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(0, -1, -1), scene);
+    dirLight.position = new BABYLON.Vector3(0, 10, 10);
+    dirLight.intensity = 0.6;
 
-            // Ground yang menerima bayangan
-            const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 20, height: 20 }, scene);
-            ground.position.y = -1;
-            ground.receiveShadows = true;
+    const shadowGenerator = new BABYLON.ShadowGenerator(1024, dirLight);
+    shadowGenerator.useBlurExponentialShadowMap = true;
+    shadowGenerator.blurKernel = 32;
 
-            // Load model
-            BABYLON.SceneLoader.Append("models/", "F-35.glb", scene, function () {
-                // Tambahkan semua mesh ke shadow caster
-                scene.meshes.forEach(mesh => {
-                    if (mesh !== ground) {
-                        shadowGenerator.addShadowCaster(mesh);
-                        mesh.receiveShadows = true;
-                    }
-                });
+    // Perbesar ukuran alas menjadi 10 kali lebih lebar
+    const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 1000, height: 1000 }, scene);  // Ukuran 1000x1000
+    ground.position.y = -1;
+    ground.receiveShadows = true;
 
-                console.log("Model berhasil dimuat dan bayangan diterapkan!");
-            });
+    modelController = new BABYLON.TransformNode("modelController", scene);
 
-            return scene;
-        };
+    BABYLON.SceneLoader.ImportMesh("", "models/", "kuda.glb", scene, function (meshes) {
+      meshes.forEach(mesh => {
+        if (mesh.name !== "ground") {
+          mesh.parent = modelController;
+          mesh.receiveShadows = true;
+          shadowGenerator.addShadowCaster(mesh);
 
-        const scene = createScene();
-        engine.runRenderLoop(() => scene.render());
+          // Menyelaraskan posisi model dengan alas (ground)
+          const modelHeight = mesh.getBoundingInfo().maximum.y - mesh.getBoundingInfo().minimum.y;
+          modelController.position.y = modelHeight / 2;  // Menempatkan model di atas tanah
 
-        window.addEventListener("resize", () => {
-            engine.resize();
-        });
-    </script>
+          // Memperkecil model dengan mengubah skala
+          mesh.scaling = new BABYLON.Vector3(0.5, 0.5, 0.5);  // Mengurangi ukuran model menjadi setengah
+        }
+      });
+
+      modelController.position.y = 0;
+      console.log("Model berhasil dimuat!");
+    });
+
+    return scene;
+  };
+
+  const scene = createScene();
+  engine.runRenderLoop(() => scene.render());
+  window.addEventListener("resize", () => engine.resize());
+
+  // Mouse drag untuk rotasi
+  let isDragging = false;
+  let lastX = 0;
+  canvas.addEventListener("pointerdown", (evt) => {
+    isDragging = true;
+    lastX = evt.clientX;
+  });
+  canvas.addEventListener("pointerup", () => isDragging = false);
+  canvas.addEventListener("pointermove", (evt) => {
+    if (!isDragging || !modelController) return;
+    let deltaX = evt.clientX - lastX;
+    modelController.rotation.y += deltaX * 0.005;
+    lastX = evt.clientX;
+  });
+
+  // Fungsi interaktif gerak
+  function move(direction) {
+    if (!modelController) return;
+    const speed = 2; // Meningkatkan kecepatan menjadi 2
+    switch (direction) {
+      case "left":
+        modelController.position.x -= speed;
+        console.log("Moving Left");
+        break;
+      case "right":
+        modelController.position.x += speed;
+        console.log("Moving Right");
+        break;
+      case "forward":
+        modelController.position.z -= speed;
+        console.log("Moving Forward");
+        break;
+      case "backward":
+        modelController.position.z += speed;
+        console.log("Moving Backward");
+        break;
+    }
+  }
+
+  // Fungsi untuk mendeteksi tombol WASD
+  window.addEventListener("keydown", (evt) => {
+    console.log("Key pressed:", evt.key);  // Log setiap tombol yang ditekan
+    switch (evt.key) {
+      case "a": // A untuk kiri
+        move("left");
+        break;
+      case "d": // D untuk kanan
+        move("right");
+        break;
+      case "w": // W untuk maju
+        move("forward");
+        break;
+      case "s": // S untuk mundur
+        move("backward");
+        break;
+    }
+  });
+
+  // Prevent default action for scrolling on arrow keys (optional)
+  window.addEventListener("keydown", (evt) => {
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(evt.key)) {
+      evt.preventDefault();
+    }
+  });
+</script>
 </body>
 </html>
